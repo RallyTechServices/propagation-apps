@@ -2,7 +2,7 @@
 
 ## Summary/Description
 
-![screenshot](./images/screenshot.png "This is an example")
+![screenshot](./../images/feature-cancellation.png "This is an example")
 
 Highly customized app to allow for bulk "Canceling" of a Portfolio Item (Not recommended for re-distribution).  
 
