@@ -248,6 +248,11 @@ Ext.define("catsFeatureCancellation", {
               model: 'State',
               fetch: ['Name','TypeDef','TypePath'],
               remoteFilter: true,
+              filters: [{
+                property: 'TypeDef.TypePath.Name',
+                operator: 'contains',
+                value: 'PortfolioItem/'
+              }],
               sorters: [{
                 property: 'Name',
                 direction: 'ASC'
@@ -262,7 +267,7 @@ Ext.define("catsFeatureCancellation", {
               cls: 'rally-checkbox-boundlist',
               itemTpl: Ext.create('Ext.XTemplate',
                 '<div class="rally-checkbox-image"></div>',
-                '<div class="rally-checkbox-text">{Name:htmlEncode} (<span style="font-family:NotoSansBold, Helvetica, Arial">{[values.TypeDef.Name]}</span>)</div>')
+                '<div class="rally-checkbox-text">{Name:htmlEncode} (<span style="font-family:NotoSansBold, Helvetica, Arial">{[values && values.TypeDef && values.TypeDef.Name]}</span>)</div>')
           },
           listeners: {
             ready: function(cb){
