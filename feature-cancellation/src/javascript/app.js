@@ -161,6 +161,8 @@ Ext.define("catsFeatureCancellation", {
     statusUpdate: function(msg){
         Rally.ui.notify.Notifier.hide();
         Rally.ui.notify.Notifier.show({message: msg, showForever: true});
+
+        this.down('rallygridboard').getGridOrBoard().getStore().reload();
     },
     getTypesToCancel: function(){
 
@@ -191,6 +193,8 @@ Ext.define("catsFeatureCancellation", {
             operator: 'contains',
             value: 'PortfolioItem/'
         }];
+
+        var currentState = this.getSettings();
 
         return [{
             xtype: 'rallycombobox',
@@ -226,7 +230,15 @@ Ext.define("catsFeatureCancellation", {
            model: 'HierarchicalRequirement',
            field: 'ScheduleState',
            labelWidth: 200,
-           width: 400
+           width: 400,
+           listeners: {
+             ready: function(cb){
+               cb.setValue(currentState.canceledScheduleState);
+               cb.getStore().on('load', function(){
+                  cb.setValue(currentState.canceledScheduleState);
+               }, {single: true});
+             }
+           }
         },{
           xtype: 'rallycombobox',
           name: 'completedStates',
@@ -251,6 +263,15 @@ Ext.define("catsFeatureCancellation", {
               itemTpl: Ext.create('Ext.XTemplate',
                 '<div class="rally-checkbox-image"></div>',
                 '<div class="rally-checkbox-text">{Name:htmlEncode} (<span style="font-family:NotoSansBold, Helvetica, Arial">{[values.TypeDef.Name]}</span>)</div>')
+          },
+          listeners: {
+            ready: function(cb){
+              console.log('this', currentState);
+              cb.setValue(currentState.completedStates.split(','));
+              cb.getStore().on('load', function(){
+                 cb.setValue(currentState.completedStates.split(','));
+              }, {single: true});
+            }
           }
         }];
     },
