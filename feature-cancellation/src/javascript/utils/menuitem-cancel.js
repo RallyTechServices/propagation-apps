@@ -109,7 +109,7 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
         if(successfulRecords.length === this.records.length) {
             message = message + ' been canceled';
 
-            this.publish('bulkActionComplete', message);
+            this.publish('bulkActionComplete', message, true);
             //Rally.ui.notify.Notifier.show({
             //    message: message
             //});
