@@ -90,7 +90,8 @@ Ext.define("catsFeatureCancellation", {
 
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: [this.getRootModelTypePath()],
-            enableHierarchy: true
+            enableHierarchy: true,
+            autoLoad: false
         }).then({
             success: this.buildGridboard,
             scope: this
@@ -158,11 +159,17 @@ Ext.define("catsFeatureCancellation", {
             }
         }];
     },
-    statusUpdate: function(msg){
+    statusUpdate: function(msg, isComplete){
         Rally.ui.notify.Notifier.hide();
         Rally.ui.notify.Notifier.show({message: msg, showForever: true});
 
-        this.down('rallygridboard').getGridOrBoard().getStore().reload();
+        this.down('rallygridboard').getGridOrBoard().getStore().reload({
+          callback: function(){
+            this.down('rallygridboard').getGridOrBoard().getView().refresh();
+          },
+          scope: this
+        });
+      
     },
     getTypesToCancel: function(){
 
@@ -248,6 +255,14 @@ Ext.define("catsFeatureCancellation", {
               model: 'State',
               fetch: ['Name','TypeDef','TypePath'],
               remoteFilter: true,
+              filters: [{
+                property: 'TypeDef',
+                operator: '!=',
+                value: ''
+              },{
+                property: 'Enabled',
+                value: true
+              }],
               sorters: [{
                 property: 'Name',
                 direction: 'ASC'
@@ -262,13 +277,27 @@ Ext.define("catsFeatureCancellation", {
               cls: 'rally-checkbox-boundlist',
               itemTpl: Ext.create('Ext.XTemplate',
                 '<div class="rally-checkbox-image"></div>',
-                '<div class="rally-checkbox-text">{Name:htmlEncode} (<span style="font-family:NotoSansBold, Helvetica, Arial">{[values.TypeDef.Name]}</span>)</div>')
+                '<div class="rally-checkbox-text">{Name:htmlEncode} (<span style="font-family:NotoSansBold, Helvetica, Arial">{[values && values.TypeDef && values.TypeDef.Name]}</span>)</div>')
           },
           listeners: {
             ready: function(cb){
-              console.log('this', currentState);
+
+              if (cb.getStore() && cb.getStore().getRange() && cb.getStore().getRange().length > 0){
+                //This is to remove any weird records that might not have a TypeDef
+                Ext.Array.each(cb.getStore().getRange(), function(r){
+                   if (!r.getData() || !r.getData().TypeDef || !r.getData().TypeDef.Name){
+                     cb.getStore().remove(r);
+                   }
+                });
+              }
               cb.setValue(currentState.completedStates.split(','));
-              cb.getStore().on('load', function(){
+              cb.getStore().on('load', function(store){
+                 Ext.Array.each(cb.getStore().getRange(), function(r){
+                   if (!r.getData() || !r.getData().TypeDef || !r.getData().TypeDef.Name){
+                     cb.getStore().remove(r);
+                   }
+                 });
+
                  cb.setValue(currentState.completedStates.split(','));
               }, {single: true});
             }
