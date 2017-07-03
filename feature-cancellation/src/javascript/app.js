@@ -53,10 +53,15 @@ Ext.define("catsFeatureCancellation", {
     },
     getCompletedStates: function(){
       this.logger.log('getCompletedStates', this.getSetting('completedStates'));
-      if (!Ext.isArray(this.getSetting('completedStates'))){
-         return this.getSetting('completedStates').split(',');
+      var setting = this.getSetting('completedStates');
+
+      if ( Ext.isEmpty(setting)) {
+          return [];
       }
-      return this.getSetting('completedStates');
+      if (!Ext.isArray(setting)){
+         return setting.split(',');
+      }
+      return setting;
     },
     maskUpdate: function(arg){
 
@@ -169,7 +174,7 @@ Ext.define("catsFeatureCancellation", {
           },
           scope: this
         });
-      
+
     },
     getTypesToCancel: function(){
 
