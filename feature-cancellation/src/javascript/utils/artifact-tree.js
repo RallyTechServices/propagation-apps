@@ -57,7 +57,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
       me._updateArtifacts().then({
           success: function(batch){
               this.logger.log('cancelItems. _updateArtifacts success', batch);
-              this.fireEvent('completed');
+              this.fireEvent('completed',batch);
           },
           failure: function(batch){
               this.logger.log('cancelItems. _updateArtifacts failure', batch);
@@ -81,29 +81,37 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
             });
 
         Ext.Array.each(updatedRecords, function(rec){
-          var type = rec.get('_type').toLowerCase();
-            console.log('type', type, rec.get('Project'),rec.get('ScheduleState'));
+            var type = rec.get('_type').toLowerCase();
+            var changed_fields = [];
+
             if (type === 'hierarchicalrequirement' && !Ext.Array.contains(completedStates, rec.get('ScheduleState'))){
               //TODO Check schedule state?
                  var newName = cancelPrefix + rec.get('Name');
                  rec.set('Name', newName);
+                 changed_fields.push('Name');
+
                  if (rec.get('DirectChildrenCount') === 0){
                     canceledRelease = canceledReleases[rec.get('Project')._ref];
                     rec.set('ScheduleState', canceledScheduleState);
                     rec.set('Release', canceledRelease);
                     rec.set('PlanEstimate', 0);
+                    Ext.Array.push(changed_fields,['ScheduleState','Release','PlanEstimate']);
                  }
             }
 
             if (type.toLowerCase() === 'task'){
                 rec.set('ToDo',0);
+                changed_fields.push('ToDo');
             }
 
             if (/portfolioitem/.test(type)){
               var state = rec.get('State') && rec.get('State')._ref;
               if (!Ext.Array.contains(completedStates, state)){
                rec.set('State', canceledPortfolioStates[type]);
+               changed_fields.push('State');
             }}
+
+            rec.set('__changedFields',changed_fields);
         }, this);
 
         return store.sync();

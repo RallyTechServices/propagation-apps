@@ -53,10 +53,15 @@ Ext.define("catsFeatureCancellation", {
     },
     getCompletedStates: function(){
       this.logger.log('getCompletedStates', this.getSetting('completedStates'));
-      if (!Ext.isArray(this.getSetting('completedStates'))){
-         return this.getSetting('completedStates').split(',');
+      var setting = this.getSetting('completedStates');
+
+      if ( Ext.isEmpty(setting)) {
+          return [];
       }
-      return this.getSetting('completedStates');
+      if (!Ext.isArray(setting)){
+         return setting.split(',');
+      }
+      return setting;
     },
     maskUpdate: function(arg){
 
@@ -159,17 +164,42 @@ Ext.define("catsFeatureCancellation", {
             }
         }];
     },
-    statusUpdate: function(msg, isComplete){
+    _updateRecordInGrid: function(store,record) {
+        var oid = record.get('ObjectID');
+        var items = store.findAllRecordsWithId(oid);
+
+        if ( Ext.isEmpty(items) ) {
+            this.logger.log(record.get('FormattedID'),'item not displaying in grid right now');
+            return;
+        }
+
+        var changed_fields = record.get('__changedFields') || [];
+        Ext.Array.each(items, function(item){
+            Ext.Array.each(changed_fields, function(field){
+                item.set(field,record.get(field));
+            });
+        });
+        return;
+    },
+    statusUpdate: function(msg, isComplete,affectedRootRecords, allRecords){
         Rally.ui.notify.Notifier.hide();
         Rally.ui.notify.Notifier.show({message: msg, showForever: true});
 
-        this.down('rallygridboard').getGridOrBoard().getStore().reload({
-          callback: function(){
-            this.down('rallygridboard').getGridOrBoard().getView().refresh();
-          },
-          scope: this
-        });
-      
+        this.logger.log('statusUpdate',isComplete,msg);
+
+        var store = this.down('rallygridboard').getGridOrBoard().getStore();
+        Ext.Array.each(allRecords, function(record){
+            this._updateRecordInGrid(store,record);
+        },this);
+
+
+        // this.down('rallygridboard').getGridOrBoard().getStore().reload({
+        //   callback: function(){
+        //     this.down('rallygridboard').getGridOrBoard().getView().refresh();
+        //   },
+        //   scope: this
+        // });
+
     },
     getTypesToCancel: function(){
 

@@ -51,10 +51,13 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
                     me.publish('maskUpdate', 'Cancelling Items...');
                     tree.cancelItems();
                 },
-                completed: function(rootRecord){
+                completed: function(batch){
                    // me.fireEvent('copycomplete');
                     me.publish('maskUpdate');
-                    deferred.resolve({record: record});
+                    deferred.resolve({
+                        record: record,
+                        batch: batch
+                    });
                 },
                 error: function(errorMsg){
                   //  me.fireEvent('copyerror',{record: record, errorMessage: errorMsg});
@@ -71,9 +74,12 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
     },
     cancelRecords: function(records){
         var promises= [],
-            successfulRecords = [],
-            unsuccessfulRecords = [];
+            successfulRootRecords = [],
+            unsuccessfulRecords = [],
+            allRecords = [];
 
+            // successfulRootRecords are the just the ones selected directly.
+            // allRecords include the children found by the batch process
         _.each(records, function(r){
             promises.push(function() {
                 return this._cancelRecord(r);
@@ -88,28 +94,28 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
                         errorMessage = r.errorMessage;
                         unsuccessfulRecords.push(r.record);
                     } else {
-                        successfulRecords.push(r.record);
+                        successfulRootRecords.push(r.record);
+                        if ( r.batch && r.batch.operations && r.batch.operations.length > 0 ) {
+                            Ext.Array.push(allRecords,r.batch.operations[0].records);
+                        }
                     }
                 });
-
-                this.onSuccess(successfulRecords, unsuccessfulRecords, {}, errorMessage);
+                this.onSuccess(successfulRootRecords, unsuccessfulRecords, {}, errorMessage, allRecords);
             },
             failure: function(msg){
-
-                this.onSuccess([], [], {}, msg);
+                this.onSuccess([], [], {}, msg, []);
             },
             scope: this
         });
 
     },
-    onSuccess: function (successfulRecords, unsuccessfulRecords, args, errorMessage) {
+    onSuccess: function (successfulRecords, unsuccessfulRecords, args, errorMessage, allRecords) {
 
         var message = successfulRecords.length + (successfulRecords.length === 1 ? ' item has ' : ' items have ');
 
         if(successfulRecords.length === this.records.length) {
             message = message + ' been canceled';
-
-            this.publish('bulkActionComplete', message, true);
+            this.publish('bulkActionComplete', message, true, successfulRecords, allRecords);
             //Rally.ui.notify.Notifier.show({
             //    message: message
             //});
@@ -118,7 +124,7 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
                 message = "0 items have been canceled";
             }
 
-            this.publish('bulkActionError', message + ', but ' + unsuccessfulRecords.length + ' failed: ' + errorMessage);
+            this.publish('bulkActionError', message + ', but ' + unsuccessfulRecords.length + ' failed: ' + errorMessage,[]);
             //Rally.ui.notify.Notifier.showError({
             //    message: message + ', but ' + unsuccessfulRecords.length + ' failed: ' + errorMessage,
             //    saveDelay: 500
