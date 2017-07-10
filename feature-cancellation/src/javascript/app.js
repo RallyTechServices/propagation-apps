@@ -16,7 +16,8 @@ Ext.define("catsFeatureCancellation", {
             canceledScheduleState: 'Defined',
             canceledReleaseName: 'Cancelled',
             canceledPortfolioStateName: 'Cancelled',
-            canceledPrefix: '[CANCELLED] '
+            canceledPrefix: '[CANCELLED] ',
+            defaultColumns: 'FormattedID,Name'
         }
     },
 
@@ -102,13 +103,24 @@ Ext.define("catsFeatureCancellation", {
             scope: this
         });
     },
+    getDefaultColumns: function(){
+       var defaults = ['FormattedID','Name'];
+       if (this.getSetting('defaultColumns')){
+          var defColumns = this.getSetting('defaultColumns');
+           if (Ext.isString(this.getSetting('defaultColumns'))){
+              defColumns = defColumns.split(',');
+           }
+           return Ext.Array.merge(defaults, defColumns);
+       }
+       return defaults;
+    },
     buildGridboard: function(store){
         if (this.down('rallygridboard')){
             this.down('rallygridboard').destroy();
         }
 
         var typesToCancel = this.getTypesToCancel();
-
+        this.logger.log('buildGridboard', this.getDefaultColumns());
         this.add({
             xtype: 'rallygridboard',
             context: this.getContext(),
@@ -119,10 +131,7 @@ Ext.define("catsFeatureCancellation", {
                 storeConfig: {
                     pageSize: 200
                 },
-                columnCfgs: [
-                    'Name',
-                    'Project'
-                ],
+                columnCfgs: this.getDefaultColumns(),
                 bulkEditConfig: {
                     items: [{
                         xtype: 'rallyrecordmenuitembulkcancel' ,
@@ -137,7 +146,13 @@ Ext.define("catsFeatureCancellation", {
                 }
             },
             plugins: this.getPlugins(),
-            height: this.getHeight()
+            height: this.getHeight(),
+            listeners: {
+                viewchange: function(gb){
+                    this.buildTreeStore();
+                },
+                scope: this
+            }
         });
 
     },
@@ -162,6 +177,11 @@ Ext.define("catsFeatureCancellation", {
                     }
                 }
             }
+        },{
+          ptype: 'rallygridboardsharedviewcontrol',
+          stateful: true,
+          stateId: this.getContext().getScopedStateId('cancel-view'),
+          stateEvents: ['select','beforedestroy']
         }];
     },
     _updateRecordInGrid: function(store,record) {
@@ -329,6 +349,25 @@ Ext.define("catsFeatureCancellation", {
                  });
 
                  cb.setValue(currentState.completedStates.split(','));
+              }, {single: true});
+            }
+          }
+        },{
+          xtype: 'rallyfieldcombobox',
+          name: 'defaultColumns',
+          fieldLabel: 'Default Columns',
+          labelAlign:  'right',
+          model: 'PortfolioItem',
+          multiSelect: true,
+          labelWidth: 200,
+          width: 400,
+          listeners: {
+            ready: function(cb){
+              var currentDefaults = currentState && currentState.defaultColumns && currentState.defaultColumns.split(',') || [];
+              currentDefaults = Ext.Array.merge(['FormattedID','Name'],currentDefaults);
+              cb.setValue(currentDefaults);
+              cb.getStore().on('load', function(store){
+                 cb.setValue(currentDefaults);
               }, {single: true});
             }
           }

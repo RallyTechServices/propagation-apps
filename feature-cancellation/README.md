@@ -6,6 +6,8 @@
 
 Highly customized app to allow for bulk "Canceling" of a Portfolio Item (Not recommended for re-distribution).  
 
+The "Cancel" menu item will only be available if all of the items selected are NOT in the configured "Completed States".
+
 If a portfolio item is cancelled, then all of the items in its tree will be updated as follows:
 1.  Portfolio Items will be set to a state of "Cancelled" if they aren't already in a "Completed State"
 2.  If the user story is not already in Completed or greater state, User Story names will be prefixed with the string "[CANCELLED] "
