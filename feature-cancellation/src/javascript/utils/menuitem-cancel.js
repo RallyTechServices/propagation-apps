@@ -25,8 +25,15 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
            this.cancelRecords(this.records, null);
        },
        predicate: function (records) {
+         var completedStates = this.completedStates;
            return _.every(records, function (record) {
                var thisRecordType = record.get('_type').toLowerCase();
+               var state = record.get('State');
+              
+               var isCompleted = Ext.Array.contains(completedStates, state && state._ref);
+               if (isCompleted){
+                 return false;
+               }
                return (/portfolioitem/.test(thisRecordType));
            });
        }
