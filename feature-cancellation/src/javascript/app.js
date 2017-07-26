@@ -17,7 +17,8 @@ Ext.define("catsFeatureCancellation", {
             canceledReleaseName: 'Cancelled',
             canceledPortfolioStateName: 'Cancelled',
             canceledPrefix: '[CANCELLED] ',
-            defaultColumns: 'FormattedID,Name'
+            defaultColumns: 'FormattedID,Name',
+            completedStoryStates: 'Accepted'
         }
     },
 
@@ -55,6 +56,18 @@ Ext.define("catsFeatureCancellation", {
     getCompletedStates: function(){
       this.logger.log('getCompletedStates', this.getSetting('completedStates'));
       var setting = this.getSetting('completedStates');
+
+      if ( Ext.isEmpty(setting)) {
+          return this.getCompletedStoryStates();
+      }
+      if (!Ext.isArray(setting)){
+         return setting.split(',').concat(this.getCompletedStoryStates());
+      }
+      return setting;
+    },
+    getCompletedStoryStates: function(){
+      this.logger.log('getCompletedStoryStates', this.getSetting('completedStoryStates'));
+      var setting = this.getSetting('completedStoryStates');
 
       if ( Ext.isEmpty(setting)) {
           return [];
@@ -119,7 +132,10 @@ Ext.define("catsFeatureCancellation", {
             this.down('rallygridboard').destroy();
         }
 
-        var typesToCancel = this.getTypesToCancel();
+        var typesToCancel = this.getTypesToCancel(),
+          cancelledPrefix = this.getCanceledPrefix(),
+          canceledPortfolioStateName = this.getCanceledPortfolioStateName();
+
         this.logger.log('buildGridboard', this.getDefaultColumns());
         this.add({
             xtype: 'rallygridboard',
@@ -136,13 +152,28 @@ Ext.define("catsFeatureCancellation", {
                     items: [{
                         xtype: 'rallyrecordmenuitembulkcancel' ,
                         portfolioItemTypes: this.getPortfolioItemTypePaths(),
-                        portfolioItemCanceledStates: this.portfolioItemCanceledStates,
+                        canceledPortfolioStateName: canceledPortfolioStateName,
                         canceledReleaseHash: this.canceledReleaseHash,
                         canceledScheduleState: this.getCanceledScheduleState(),
                         canceledPrefix: this.getCanceledPrefix(),
                         completedStates: this.completedStates,
+                        portfolioItemCanceledStates: this.portfolioItemCanceledStates,
                         types: typesToCancel
                     }]
+                },
+                rowActionColumnConfig: {
+
+                  rowActionsFn: function (record) {
+                      console.log('rowactionsfn', record);
+                      return [
+                          {
+                              xtype: 'rallyrecordmenuitemrestore',
+                              record: record,
+                              cancelledPrefix: cancelledPrefix,
+                              canceledPortfolioStateName: canceledPortfolioStateName
+                          }
+                      ];
+                  }
                 }
             },
             plugins: this.getPlugins(),
@@ -195,23 +226,31 @@ Ext.define("catsFeatureCancellation", {
 
         var changed_fields = record.get('__changedFields') || [];
         Ext.Array.each(items, function(item){
-            Ext.Array.each(changed_fields, function(field){
-                item.set(field,record.get(field));
-            });
-        });
+            if (Ext.isArray(changed_fields)){
+              Ext.Array.each(changed_fields, function(field){
+                  item.set(field,record.get(field));
+              });
+            }
+
+            if (Ext.isObject(changed_fields)){
+              Ext.Object.each(changed_fields, function(field, val){
+                  item.set(field,val);
+              });
+            }
+         });
         return;
     },
     statusUpdate: function(msg, isComplete,affectedRootRecords, allRecords){
         Rally.ui.notify.Notifier.hide();
         Rally.ui.notify.Notifier.show({message: msg, showForever: true});
 
-        this.logger.log('statusUpdate',isComplete,msg);
+        this.logger.log('statusUpdate',isComplete,msg, allRecords);
 
         var store = this.down('rallygridboard').getGridOrBoard().getStore();
         Ext.Array.each(allRecords, function(record){
             this._updateRecordInGrid(store,record);
         },this);
-
+        this.down('rallygridboard').getGridOrBoard().getView().refresh();
 
         // this.down('rallygridboard').getGridOrBoard().getStore().reload({
         //   callback: function(){
@@ -241,6 +280,7 @@ Ext.define("catsFeatureCancellation", {
         return this.getSetting('rootModelTypePath');
     },
     showErrorNotification: function(msg){
+        this.setLoading(false);
         Rally.ui.notify.Notifier.showError({message: msg});
     },
     getSettingsFields: function(){
@@ -349,6 +389,25 @@ Ext.define("catsFeatureCancellation", {
                  });
 
                  cb.setValue(currentState.completedStates.split(','));
+              }, {single: true});
+            }
+          }
+        },{
+          xtype: 'rallyfieldvaluecombobox',
+          name: 'completedStoryStates',
+          fieldLabel: 'Completed User Story States',
+          labelAlign:  'right',
+          model: 'HierarchicalRequirement',
+          field: 'ScheduleState',
+          multiSelect: true,
+          labelWidth: 200,
+          width: 400,
+          listeners: {
+            ready: function(cb){
+              if (!currentState.completedStoryStates){ return; }
+              cb.setValue(currentState.completedStoryStates.split(','));
+              cb.getStore().on('load', function(store){
+                 cb.setValue(currentState.completedStoryStates.split(','));
               }, {single: true});
             }
           }

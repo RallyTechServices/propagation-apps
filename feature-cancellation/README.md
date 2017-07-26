@@ -4,7 +4,7 @@
 
 ![screenshot](./../images/feature-cancellation.png "This is an example")
 
-Highly customized app to allow for bulk "Canceling" of a Portfolio Item (Not recommended for re-distribution).  
+*Highly customized* app to allow for bulk "Canceling" of a Portfolio Item (Not recommended for re-distribution).  
 
 The "Cancel" menu item will only be available if all of the items selected are NOT in the configured "Completed States".
 
@@ -17,6 +17,10 @@ If a portfolio item is cancelled, then all of the items in its tree will be upda
     * Release set to configured "Canceled Release" (if it exists in the project the item is in)
 4.  Task To Do will be set to 0 for any tasks below the canceled item (even if the story is set to complete)
 
+The "Restore" single menu item will restore an item and its children to the state that it was the last time that hierarchy was cancelled.  
+There are several caveats that are associated with this feature:
+1.  All items in the hierarchy must have been cancelled together.  If you cancel an initiative and then restore and cancel items underneath that initiative at another date, restoring the initiative will restore the items to the original state they were in the first time the initiative was cancelled.  
+2.  If items move projects, the restore may not work properly.
 
 ## App Settings:
 The following items can be configured in the app:

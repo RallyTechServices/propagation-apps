@@ -173,6 +173,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
         }, this);
 
         this.logger.log('_loadArtifactChildren',childrenToLoad, this.parentChildTypeMap, artifact.get('_type').toLowerCase());
+        this.collectionsLoading = 0;
         _.each(childrenToLoad, function(c){
             this.logger.log('_loadArtifactChildren child',c, artifact.get(c.collectionName).Count);
             if (artifact.get(c.collectionName).Count > 0){
@@ -181,7 +182,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
             }
         }, this);
 
-        if (collectionsLoading === 0){
+        if (this.collectionsLoading === 0){
             this._checkForDoneness();
         }
     },
@@ -192,7 +193,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
             this.fireEvent('error', errorMessage);
             return;
         }
-        if (this.tree && _.keys(this.tree).length === this.totalRecords){
+        if ((this.tree && _.keys(this.tree).length === this.totalRecords) || (this.collectionsLoading === 0)){
             this.logger.log('TREE LOADED!')
             this.fireEvent('treeloaded', this);
         }
@@ -200,7 +201,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
     _loadCollection: function(artifact, collectionName, loadRecord, preserveRefs){
         var deferred = Ext.create('Deft.Deferred'),
             parentOid = artifact.get('ObjectID');
-
+        this.collectionsLoading++;
         this.tree[parentOid][collectionName] = [];
 
         var filters = [];
@@ -237,7 +238,9 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
                 }
             },
             scope: this
-        });
+        }).always(function(){
+          this.collectionsLoading--;
+        },this);
 
         return deferred;
     },
