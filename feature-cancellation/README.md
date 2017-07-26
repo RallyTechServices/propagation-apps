@@ -19,8 +19,9 @@ If a portfolio item is cancelled, then all of the items in its tree will be upda
 
 The "Restore" single menu item will restore an item and its children to the state that it was the last time that hierarchy was cancelled.  
 There are several caveats that are associated with this feature:
-1.  All items in the hierarchy must have been cancelled together.  If you cancel an initiative and then restore and cancel items underneath that initiative at another date, restoring the initiative will restore the items to the original state they were in the first time the initiative was cancelled.  
-2.  If items move projects, the restore may not work properly.
+1.  Since it uses the snapshots closest to the time of the cancel, if an item was cancelled at one level (an initiative) on Friday, restored at the Feature level (below the original cancelled level) on Monday, and cancelled again on Tuesday.  Then if someone tries to restore the initiative, it will revert to the original state of the descendent data as it was on Friday .  If someone tries to restore the feature, then it will revert to the original state of the data on the day the feature was last cancelled, which was Tuesday.  As you see, that could potentially give different results.
+2.  If any items are moved between projects, the restore may not work properly for the release field since it uses the release’s ObjectID to restore the release and that object id will not exist in a different project.
+3.  If any items are deleted, then they may not be restored properly.
 
 ## App Settings:
 The following items can be configured in the app:
