@@ -22,19 +22,42 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
         text: 'Cancel',
 
        handler: function () {
-           this.cancelRecords(this.records, null);
+
+         Ext.create('Rally.ui.dialog.ConfirmDialog', {
+             message: Ext.String.format('Are you sure you would like to cancel {0} work items? All child items that are not marked complete will also be cancelled.',this.records.length),
+             confirmLabel: 'Yes, Proceed',
+             cancelLabel: 'No',
+             title: 'Cancel Artifacts?',
+             listeners: {
+                 confirm: function(){
+                   this.cancelRecords(this.records, null);
+                 },
+                 cancel: function(){
+                   this.onSuccess([], [], {}, "", []);
+                 },
+                 scope: this
+             }
+         });
+
        },
        predicate: function (records) {
          var completedStates = this.completedStates;
+
            return _.every(records, function (record) {
                var thisRecordType = record.get('_type').toLowerCase();
-               var state = record.get('State');
-              
-               var isCompleted = Ext.Array.contains(completedStates, state && state._ref);
+               var state = null;
+
+               if (thisRecordType === 'hierarchicalrequirement'){
+                 state = record.get('ScheduleState');
+               } else {
+                 state = record.get('State') && record.get('State')._ref;
+
+               }
+               var isCompleted = Ext.Array.contains(completedStates, state);
                if (isCompleted){
                  return false;
                }
-               return (/portfolioitem/.test(thisRecordType));
+               return (/portfolioitem/.test(thisRecordType) || /hierarchicalrequirement/.test(thisRecordType));
            });
        }
     },
@@ -85,6 +108,8 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
             unsuccessfulRecords = [],
             allRecords = [];
 
+
+
             // successfulRootRecords are the just the ones selected directly.
             // allRecords include the children found by the batch process
         _.each(records, function(r){
@@ -110,7 +135,7 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
                 this.onSuccess(successfulRootRecords, unsuccessfulRecords, {}, errorMessage, allRecords);
             },
             failure: function(msg){
-                this.onSuccess([], [], {}, msg, []);
+                this.onSuccess([], records, {}, msg, []);
             },
             scope: this
         });
@@ -131,11 +156,11 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
                 message = "0 items have been canceled";
             }
 
-            this.publish('bulkActionError', message + ', but ' + unsuccessfulRecords.length + ' failed: ' + errorMessage,[]);
-            //Rally.ui.notify.Notifier.showError({
-            //    message: message + ', but ' + unsuccessfulRecords.length + ' failed: ' + errorMessage,
-            //    saveDelay: 500
-            //});
+            if (unsuccessfulRecords.length === 0){
+              this.publish('bulkActionComplete', message + '.  Cancellation aborted by user.',[]);
+            } else {
+              this.publish('bulkActionError', message + ', but ' + unsuccessfulRecords.length + ' failed: ' + errorMessage,[]);
+            }
         }
 
         Ext.callback(this.onActionComplete, null, [successfulRecords, unsuccessfulRecords]);
