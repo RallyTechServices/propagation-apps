@@ -69,6 +69,7 @@ Ext.define('Rally.ui.menu.bulk.Cancel', {
         this.fireEvent('loadtree');
         me.publish('maskUpdate', 'Retrieving Data...');
 
+
         var artifactTree = Ext.create('Rally.technicalservices.ArtifactTree',{
             portfolioItemTypes: this.portfolioItemTypes,
             portfolioItemCanceledStates: this.portfolioItemCanceledStates,

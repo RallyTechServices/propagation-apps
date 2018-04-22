@@ -47,7 +47,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
         this._loadModel(rootArtifact);
     },
     cancelItems: function(){
-      this.logger.log('..cancelItems..');
+      this.logger.log('..cancelItems..', this.rootArtifact && this.rootArtifact.get('FormattedID'), this.canceledPrefix);
       var me = this;
       this.totalArtifacts = _.keys(this.tree).length || 0;
       this.completedArtifacts = 0;
@@ -128,7 +128,6 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
             },
             scope: this
         });
-
     },
     _loadArtifact: function(model, artifact){
         this.logger.log('_loadArtifact', artifact);
@@ -163,8 +162,7 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
             return;
         }
 
-        var childrenToLoad = this.parentChildTypeMap[artifact.get('_type').toLowerCase()],
-            collectionsLoading = 0;
+        var childrenToLoad = this.parentChildTypeMap[artifact.get('_type').toLowerCase()];
 
         childrenToLoad = _.filter(childrenToLoad, function(c){
             if (!Ext.Array.contains(this.childTypesBlacklist, c.typePath)){
@@ -173,7 +171,6 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
         }, this);
 
         this.logger.log('_loadArtifactChildren',childrenToLoad, this.parentChildTypeMap, artifact.get('_type').toLowerCase());
-        this.collectionsLoading = 0;
         _.each(childrenToLoad, function(c){
             this.logger.log('_loadArtifactChildren child',c, artifact.get(c.collectionName).Count);
             if (artifact.get(c.collectionName).Count > 0){
@@ -187,20 +184,22 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
         }
     },
     _checkForDoneness: function(errorMessage){
+        this.logger.log('_checkForDoneness', this.collectionsLoading);
         this.logger.log('_checkForDoneness', this.tree, this.totalRecords, _.keys(this.tree).length, errorMessage);
         if (errorMessage){
             this.stoppedByError = true;
             this.fireEvent('error', errorMessage);
             return;
         }
-        if ((this.tree && _.keys(this.tree).length === this.totalRecords) || (this.collectionsLoading === 0)){
-            this.logger.log('TREE LOADED!')
+        if ((this.tree && _.keys(this.tree).length === this.totalRecords) && (this.collectionsLoading === 0)){
+            this.logger.log('_checkForDoneness...TREE LOADED!')
             this.fireEvent('treeloaded', this);
         }
     },
     _loadCollection: function(artifact, collectionName, loadRecord, preserveRefs){
         var deferred = Ext.create('Deft.Deferred'),
             parentOid = artifact.get('ObjectID');
+        if ( ! this.collectionsLoading ) { this.collectionsLoading = 0 ;}
         this.collectionsLoading++;
         this.tree[parentOid][collectionName] = [];
 
@@ -229,18 +228,19 @@ Ext.define('Rally.technicalservices.ArtifactTree',{
                             this._loadModel(r);
                         }
                     }, this);
+                    this.collectionsLoading--;
+                    this._checkForDoneness(msg);
                     deferred.resolve();
                 } else {
                     var msg = Ext.String.format("Failed to load collecton for {0}/{1} with error: {2} ",artifact.get('_type'),artifact.get('ObjectID'),operation.error.errors.join(','));
                     this.tree[parentOid].error = msg;
+                    this.collectionsLoading--;
                     this._checkForDoneness(msg);
                     deferred.reject(msg);
                 }
             },
             scope: this
-        }).always(function(){
-          this.collectionsLoading--;
-        },this);
+        });
 
         return deferred;
     },
